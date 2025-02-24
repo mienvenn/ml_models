@@ -72,12 +72,16 @@ class RidgeRegression(LinearRegression):
         self.alpha = alpha
 
     def _anal(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
-        return np.linalg.inv((X.T @ X + self.alpha * np.eye(X.shape[1]))) @ X.T @ y
+        I = np.eye(X.shape[1])
+        I[0, 0] = 0
+        return np.linalg.inv((X.T @ X + self.alpha * I)) @ X.T @ y
 
     def _grad_loss(
         self, X: np.ndarray, y: np.ndarray, y_pred: np.ndarray, n
     ) -> np.ndarray:
-        return 2 / n * (X.T @ (y_pred - y) + self.alpha * self.weights)
+        grad = 2 / n * (X.T @ (y_pred - y)) + 2 * self.alpha * self.weights
+        grad[0] -= 2 * self.alpha * self.weights[0]
+        return grad
 
 
 class LassoRegression(LinearRegression):
@@ -88,4 +92,7 @@ class LassoRegression(LinearRegression):
     def _grad_loss(
         self, X: np.ndarray, y: np.ndarray, y_pred: np.ndarray, n
     ) -> np.ndarray:
-        return 2 / n * X.T @ (y_pred - y) + self.alpha * np.sign(self.weights)
+        grad = 2 / n * X.T @ (y_pred - y)
+        reg = self.alpha * np.sign(self.weights)
+        reg[0] = 0
+        return grad + reg
