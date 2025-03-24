@@ -1,26 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Literal
 
 import numpy as np
 
-
-class BaseModel(ABC):
-    def __init__(
-        self, n_iterations: int = 1000, learning_rate: float = 0.01, bias: bool = True
-    ):
-        self.weights = None
-        self.learning_rate = learning_rate
-        self.n_iterations = n_iterations
-        self.bias = bias
-
-    @abstractmethod
-    def fit(self, X, y): ...
-
-    @abstractmethod
-    def predict(self, X): ...
+from models.base import BaseModelLinear
 
 
-class LinearRegression(BaseModel):
+class LinearRegression(BaseModelLinear):
     def __init__(
         self,
         type: Literal["analyt", "grad"] = "analyt",
@@ -31,9 +17,6 @@ class LinearRegression(BaseModel):
         super().__init__(n_iterations, learning_rate)
         self.type = type
         self.bias = bias
-
-    def _validate_data(self, X: np.ndarray, y: np.ndarray):
-        assert X.shape[0] == y.shape[0], "Invalid Data Shape"
 
     def _anal(self, X, y):
         return np.linalg.inv((X.T @ X)) @ X.T @ y
@@ -75,9 +58,9 @@ class RidgeRegression(LinearRegression):
         self.alpha = alpha
 
     def _anal(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
-        I = np.eye(X.shape[1])
-        I[0, 0] = 0
-        return np.linalg.inv((X.T @ X + self.alpha * I)) @ X.T @ y
+        I_matrix = np.eye(X.shape[1])
+        I_matrix[0, 0] = 0
+        return np.linalg.inv((X.T @ X + self.alpha * I_matrix)) @ X.T @ y
 
     def _grad_loss(
         self, X: np.ndarray, y: np.ndarray, y_pred: np.ndarray, n
@@ -120,7 +103,7 @@ class ElasticNet(LinearRegression):
         return grad + l1 + l2
 
 
-class LogisticRegressionBase(BaseModel):
+class LogisticRegressionBase(BaseModelLinear):
     @abstractmethod
     def predict_proba(self, X): ...
 
@@ -129,9 +112,6 @@ class BinaryLogisticRegression(LogisticRegressionBase):
     def __init__(self, threshold: float = 0.5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.threshold = threshold
-
-    def _validate_data(self, X: np.ndarray, y: np.ndarray):
-        assert X.shape[0] == y.shape[0], "Invalid Data Shape"
 
     def _add_bias(self, X: np.ndarray):
         if self.bias:
@@ -175,9 +155,6 @@ class MultiClassLogisticRegression(LogisticRegressionBase):
     def __init__(self, threshold: float = 0.5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.threshold = threshold
-
-    def _validate_data(self, X: np.ndarray, y: np.ndarray):
-        assert X.shape[0] == y.shape[0], "Invalid Data Shape"
 
     def _add_bias(self, X: np.ndarray):
         if self.bias:
