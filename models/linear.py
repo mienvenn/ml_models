@@ -109,9 +109,12 @@ class LogisticRegressionBase(BaseModelLinear):
 
 
 class BinaryLogisticRegression(LogisticRegressionBase):
-    def __init__(self, threshold: float = 0.5, *args, **kwargs):
+    def __init__(
+        self, threshold: float = 0.5, class_weight: dict = None, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.threshold = threshold
+        self.class_weight = class_weight
 
     def _add_bias(self, X: np.ndarray):
         if self.bias:
@@ -122,11 +125,14 @@ class BinaryLogisticRegression(LogisticRegressionBase):
         self._validate_data(X, y)
         X_b = self._add_bias(X)
         n, m = X_b.shape
+        if self.class_weight is None:
+            self.class_weight = {cls: 1.0 for cls in np.unique(y)}
         self._grad(X_b, y, n, m)
 
     def _grad_loss_bin(self, X, y, y_pred, n):
         errors = y_pred - y
-        return np.dot(X.T, errors) / n
+        sample_weights = np.array([self.class_weight[yi] for yi in y])
+        return np.dot(X.T, errors * sample_weights) / n
 
     def _grad(self, X: np.ndarray, y: np.ndarray, n, m):
         self.weights = np.zeros(m)
@@ -152,9 +158,12 @@ class BinaryLogisticRegression(LogisticRegressionBase):
 
 
 class MultiClassLogisticRegression(LogisticRegressionBase):
-    def __init__(self, threshold: float = 0.5, *args, **kwargs):
+    def __init__(
+        self, threshold: float = 0.5, class_weight: dict = None, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.threshold = threshold
+        self.class_weight = class_weight
 
     def _add_bias(self, X: np.ndarray):
         if self.bias:
@@ -170,12 +179,15 @@ class MultiClassLogisticRegression(LogisticRegressionBase):
         self.num_classes = len(np.unique(y))
         X_b = self._add_bias(X)
         n, m = X_b.shape
+        if self.class_weight is None:
+            self.class_weight = {cls: 1.0 for cls in np.unique(y)}
         self._grad(X_b, y, n, m)
 
     def _grad_loss_mult(self, X, y, y_pred, n):
         y = self._onehot(y)
         errors = y_pred - y
-        return np.dot(X.T, errors) / n
+        sample_weights = np.array([self.class_weight[yi] for yi in y])[:, np.newaxis]
+        return np.dot(X.T, errors * sample_weights) / n
 
     def _grad(self, X: np.ndarray, y: np.ndarray, n, m):
         self.weights = np.zeros((m, self.num_classes))
